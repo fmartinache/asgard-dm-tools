@@ -171,7 +171,7 @@ class Ui_MainWindow(object):
 
         self.lbl_dmid = QtWidgets.QLabel(MainWindow)
         self.lbl_dmid.setObjectName("lbl_dmid")
-        self.lbl_dmid.setGeometry(QtCore.QRect(100, 450, 200, 60))
+        self.lbl_dmid.setGeometry(QtCore.QRect(100, 450, 250, 60))
         self.lbl_dmid.setText(f"DM #{dmid}")
         self.lbl_dmid.setFont(font2)
         self.lbl_dmid.setAlignment(QtCore.Qt.AlignCenter)
