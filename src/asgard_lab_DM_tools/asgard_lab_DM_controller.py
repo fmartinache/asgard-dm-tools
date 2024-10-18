@@ -305,7 +305,7 @@ class MyWindow(QMainWindow):
         # ==============================================
         #                 SHM setup
         # ==============================================
-        shmfs = np.sort(glob.glob(f"/dev/shm/dm{dmid}ddisp*.im.shm"))
+        shmfs = np.sort(glob.glob(f"/dev/shm/dm{dmid}disp*.im.shm"))
         shmf0 = f"/dev/shm/dm{dmid}.im.shm"
         print(f"shmf0 = {shmf0}")
         print(shmfs)
