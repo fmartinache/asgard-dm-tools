@@ -82,26 +82,14 @@ def arr2im(arr, vmin=False, vmax=False, pwr=1.0, cmap=None, gamma=1.0):
     applies colormap
     ------------------------------------------ '''
     arr2 = arr.astype('float').T
-    if vmin is False:
-        mmin = arr2.min()
-    else:
-        mmin = vmin
-
-    if vmax is False:
-        mmax = arr2.max()
-    else:
-        mmax = vmax
+    mmin = arr2.min() if vmin is False else vmin
+    mmax = arr2.max() if vmax is False else vmax
+    mycmap = cm.magma if cmap is None else cmap
 
     arr2 -= mmin
     if mmax != mmin:
         arr2 /= (mmax-mmin)
-
     arr2 = arr2**pwr
-
-    if cmap is None:
-        mycmap = cm.jet
-    else:
-        mycmap = cmap
 
     res = mycmap(arr2)
     res[:, :, 3] = gamma
@@ -388,7 +376,7 @@ class MyWindow(QMainWindow):
         pass
 
     # =========================================================
-    def select_flat_cmd(wdir='./'):
+    def select_flat_cmd(self, wdir='./'):
         '''Matches a DM flat command file to a DM id #.
 
         Returns the name of the file in the work directory.
@@ -407,7 +395,7 @@ class MyWindow(QMainWindow):
 
         if self.ui.chB_actv_flat.isChecked():
             # flat_cmd = np.loadtxt("./17DW019#113_FLAT_MAP_COMMANDS.txt")
-            flat_cmd = np.loadtxt(select_flat_cmd())
+            flat_cmd = np.loadtxt(self.select_flat_cmd())
             self.shms[0].set_data(cmd_2_map2D(flat_cmd, fill=0.0))
             gui_conf['flat_checkbox'] = True
         else:
