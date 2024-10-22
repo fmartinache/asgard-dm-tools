@@ -2,9 +2,10 @@
 
 from xaosim.QtMain import QtMain
 from xaosim.shmlib import shm
-from xaosim.zernike import zer_mode_bank_2D as zer_bank
+from xaosim.zernike import mkzer1
 from xaosim.zernike import zer_name_list as zer_names
 from xaosim.pupil import F_test_figure as ftest
+from xaosim.pupil import _dist as dist
 
 import numpy as np
 import matplotlib.cm as cm
@@ -27,8 +28,16 @@ import argparse
 home = os.getenv('HOME')
 myqt = 0  # myqt is a global variable
 dms = 12  # the DM size. Could be read from shared memory
+aps = 10  # the aperture grid size
 dmid = 0  # the DM identifier (should be 1, 2, 3 or 4)
 gui_conf = {}  # dictionary to keep track of checkbox & sliders status
+
+
+# ----------------------------------------
+dd = dist(dms, dms, between_pix=True)  # auxilliary array
+tprad = 5.5  # the taper function radius
+taper = np.exp(-(dd/tprad)**20)  # power to be adjusted ?
+amask = taper > 0.4  # seems to work well
 
 # home = os.getenv('HOME')
 # conf_dir = next(iter(fpao_tools.__path__))+"/../config/"
@@ -107,6 +116,31 @@ def cmd_2_map2D(cmd, fill=np.nan):
     return np.insert(cmd, [0, 10, 130, 140], fill).reshape((dms, dms))
 
 
+def zer_bank(i0, i1, tapered=True):
+    ''' ------------------------------------------
+    Returns a 3D array containing 2D (dms x dms)
+    maps of Zernike modes for Noll index going
+    from i0 to i1 included.
+
+    Parameters:
+    ----------
+    - i0: the first Zernike index to be used
+    - i1: the last Zernike index to be used
+    - tapered: boolean (tapers the Zernike)
+    ------------------------------------------ '''
+    dZ = i1 - i0 + 1
+    res = np.zeros((dZ, dms, dms))
+    for i in range(i0, i1+1):
+        test = mkzer1(i, dms, aps//2, limit=False)
+        test -= test[amask].mean()
+        if ii != 1:
+            test /= test[amask].std()
+        if tapered is True:
+            test *= taper * mask
+        res[i-i0] = test
+
+    return(res)
+
 # =====================================================================
 #                           interface design
 # =====================================================================
@@ -115,8 +149,8 @@ class Ui_MainWindow(object):
         wsx, wsy = 900, 600  # window size
         clh = 28             # control-line height
         self.nzer = 11       # number of zernike modes to work with
-        self.amax = 0.4      # max. modulation amplitude
-        self.nzstep = 20     # number of steps for Zernike sliders
+        self.amax = 0.2      # max. modulation amplitude
+        self.nzstep = 40     # number of steps for Zernike sliders
         # title font
         font1 = QtGui.QFont()
         font1.setPointSize(12)
@@ -241,7 +275,7 @@ class Ui_MainWindow(object):
         self.zer_a0 = np.zeros(self.nzer)
 
         znames = zer_names(1, self.nzer)
-        self.zbank = zer_bank(dms, 1, self.nzer, limit=False)
+        self.zbank = zer_bank(1, self.nzer, taper=True)
         self.zmap = np.zeros((dms, dms))
 
         for ii in range(self.nzer):
@@ -471,7 +505,7 @@ class MyWindow(QMainWindow):
             self.data_img = self.shm0.get_data()  # combined channel
             # self.data_img = self.shms[0].get_data()  # combined channel
         self.ui.imv_data.setImage(
-            arr2im(self.data_img, vmax=1, cmap=self.mycmap),
+            arr2im(self.data_img, vmin=0, vmax=1, cmap=self.mycmap),
             border=2)
 
     # =========================================================
