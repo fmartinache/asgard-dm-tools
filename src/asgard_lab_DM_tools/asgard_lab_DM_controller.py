@@ -6,6 +6,7 @@ from xaosim.zernike import mkzer1
 from xaosim.zernike import zer_name_list as zer_names
 from xaosim.pupil import F_test_figure as ftest
 from xaosim.pupil import _dist as dist
+from scipy.interpolate import griddata
 
 import numpy as np
 import matplotlib.cm as cm
@@ -38,6 +39,7 @@ dd = dist(dms, dms, between_pix=True)  # auxilliary array
 tprad = 5.5  # the taper function radius
 taper = np.exp(-(dd/tprad)**20)  # power to be adjusted ?
 amask = taper > 0.4  # seems to work well
+circ = dd < 4
 
 # home = os.getenv('HOME')
 # conf_dir = next(iter(fpao_tools.__path__))+"/../config/"
@@ -116,7 +118,24 @@ def cmd_2_map2D(cmd, fill=np.nan):
     return np.insert(cmd, [0, 10, 130, 140], fill).reshape((dms, dms))
 
 
-def zer_bank(i0, i1, tapered=True):
+def fill_mode(dmmap):
+    ''' Extrapolate the modes outside the aperture to ensure edge continuity
+
+    Parameter:
+    ---------
+    - a single 2D DM map
+    '''
+    out = True ^ amask  # outside the aperture
+    gx, gy = np.mgrid[0:dms, 0:dms]
+    points = np.array([gx[amask], gy[amask]]).T
+    values = np.array(dmmap[amask])
+    grid_z0 = griddata(points, values, (gx[out], gy[out]), method='nearest')
+    res = dmmap.copy()
+    res[out] = grid_z0
+    return res
+
+
+def zer_bank(i0, i1, extrapolate=True, tapered=False):
     ''' ------------------------------------------
     Returns a 3D array containing 2D (dms x dms)
     maps of Zernike modes for Noll index going
@@ -130,14 +149,19 @@ def zer_bank(i0, i1, tapered=True):
     ------------------------------------------ '''
     dZ = i1 - i0 + 1
     res = np.zeros((dZ, dms, dms))
-    for i in range(i0, i1+1):
-        test = mkzer1(i, dms, aps//2, limit=False)
-        test -= test[amask].mean()
+    for ii in range(i0, i1+1):
+        test = mkzer1(ii, dms, aps//2, limit=False)
+        # if ii == 1:
+        #     test *= circ
         if ii != 1:
+            test -= test[amask].mean()
             test /= test[amask].std()
+        if extrapolate is True:
+            # if ii != 1:
+            test = fill_mode(test)
         if tapered is True:
             test *= taper * mask
-        res[i-i0] = test
+        res[ii-i0] = test
 
     return(res)
 
@@ -240,7 +264,7 @@ class Ui_MainWindow(object):
         self.lbl_disp_cross.setObjectName("lbl_disp_cross")
         self.lbl_disp_cross.setGeometry(
             QtCore.QRect(lx0, 50 + clh, 50, clh))
-        self.lbl_disp_cross.setText(f"{self.cross_a0:0.2f}")
+        self.lbl_disp_cross.setText(f"{self.cross_a0:0.3f}")
 
         # --------------------- FTEST -----------------
         # activation checkbox for FTEST
@@ -265,7 +289,7 @@ class Ui_MainWindow(object):
         self.lbl_disp_ftest.setObjectName("lbl_disp_ftest")
         self.lbl_disp_ftest.setGeometry(
             QtCore.QRect(lx0, 50 + 2 * clh, 50, clh))
-        self.lbl_disp_ftest.setText(f"{self.ftest_a0:0.2f}")
+        self.lbl_disp_ftest.setText(f"{self.ftest_a0:0.3f}")
 
         # ------------------- ZERNIKE -----------------
         zy0 = 180  # vertical origin of the zenike block
@@ -275,7 +299,7 @@ class Ui_MainWindow(object):
         self.zer_a0 = np.zeros(self.nzer)
 
         znames = zer_names(1, self.nzer)
-        self.zbank = zer_bank(1, self.nzer, taper=True)
+        self.zbank = zer_bank(1, self.nzer) #, tapered=True)
         self.zmap = np.zeros((dms, dms))
 
         for ii in range(self.nzer):
@@ -300,7 +324,7 @@ class Ui_MainWindow(object):
             self.lbl_disp_zer[ii].setObjectName(f"lbl_disp_zer_{ii:02d}")
             self.lbl_disp_zer[ii].setGeometry(
                 QtCore.QRect(lx0, zy0+clh*ii, 50, clh))
-            self.lbl_disp_zer[ii].setText("0.00")
+            self.lbl_disp_zer[ii].setText("0.000")
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -400,10 +424,15 @@ class MyWindow(QMainWindow):
             return
 
         a0 = self.ui.amax / self.ui.nzstep
+        p0 = 0.5 / self.ui.nzstep # special case for piston
         zmap = np.zeros((dms, dms))
         for ii in range(self.ui.nzer):
-            self.ui.zer_a0[ii] = a0 * self.ui.slid_zer[ii].value()
-            self.ui.lbl_disp_zer[ii].setText(f"{self.ui.zer_a0[ii]:.2f}")
+            if ii == 0:
+                # special case for piston only!
+                self.ui.zer_a0[ii] = p0 * self.ui.slid_zer[ii].value()
+            else:
+                self.ui.zer_a0[ii] = a0 * self.ui.slid_zer[ii].value()
+            self.ui.lbl_disp_zer[ii].setText(f"{self.ui.zer_a0[ii]:.3f}")
             zmap += self.ui.zer_a0[ii] * self.ui.zbank[ii]
         self.shms[2].set_data(zmap)
 
@@ -418,8 +447,8 @@ class MyWindow(QMainWindow):
         flat_cmd_files = [
             "17DW019#113_FLAT_MAP_COMMANDS.txt",
             "17DW019#093_FLAT_MAP_COMMANDS.txt",
-            "17DW019#xxx_FLAT_MAP_COMMANDS.txt",
-            "17DW019#yyy_FLAT_MAP_COMMANDS.txt"]
+            "17DW019#122_FLAT_MAP_COMMANDS.txt",
+            "17DW019#053_FLAT_MAP_COMMANDS.txt"]
         return wdir + flat_cmd_files[dmid - 1]
 
     # =========================================================
@@ -463,7 +492,7 @@ class MyWindow(QMainWindow):
         a0 = self.ui.amax / self.ui.nzstep
         self.ui.cross_a0 = self.ui.slid_cross.value() * a0
         gui_conf['cross_amplitude'] = self.ui.slid_cross.value()
-        self.ui.lbl_disp_cross.setText(f"{self.ui.cross_a0:.2f}")
+        self.ui.lbl_disp_cross.setText(f"{self.ui.cross_a0:.3f}")
         self.ui.chB_actv_cross.setChecked(True)
         self.activate_cross()
 
@@ -490,7 +519,7 @@ class MyWindow(QMainWindow):
         a0 = self.ui.amax / self.ui.nzstep
         self.ui.ftest_a0 = self.ui.slid_ftest.value() * a0
         gui_conf['ftest_amplitude'] = self.ui.slid_ftest.value()
-        self.ui.lbl_disp_ftest.setText(f"{self.ui.ftest_a0:.2f}")
+        self.ui.lbl_disp_ftest.setText(f"{self.ui.ftest_a0:.3f}")
         self.ui.chB_actv_ftest.setChecked(True)
         self.activate_ftest()
 
