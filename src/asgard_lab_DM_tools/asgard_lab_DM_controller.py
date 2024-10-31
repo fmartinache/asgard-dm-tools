@@ -362,7 +362,6 @@ class MyWindow(QMainWindow):
             self.shms.append(shm(shmfs[ii]))
             print(f"added: {shmfs[ii]}")  # % (shmfs[ii],))
 
-        # breakpoint()
         if self.nch != 0:
             self.shm0 = shm(shmf0)
         else:
@@ -446,19 +445,19 @@ class MyWindow(QMainWindow):
         '''
         flat_cmd_files = [
             "17DW019#113_FLAT_MAP_COMMANDS.txt",
+            "17DW019#053_FLAT_MAP_COMMANDS.txt",
             "17DW019#093_FLAT_MAP_COMMANDS.txt",
-            "17DW019#122_FLAT_MAP_COMMANDS.txt",
-            "17DW019#053_FLAT_MAP_COMMANDS.txt"]
-        return wdir + flat_cmd_files[dmid - 1]
+            "17DW019#122_FLAT_MAP_COMMANDS.txt"]
+        return wdir + '/' + flat_cmd_files[dmid - 1]
 
     # =========================================================
     def activate_flat(self):
         if self.nch == 0:
             return
-
+        wdir = os.path.dirname(__file__)
         if self.ui.chB_actv_flat.isChecked():
             # flat_cmd = np.loadtxt("./17DW019#113_FLAT_MAP_COMMANDS.txt")
-            flat_cmd = np.loadtxt(self.select_flat_cmd())
+            flat_cmd = np.loadtxt(self.select_flat_cmd(wdir))
             self.shms[0].set_data(cmd_2_map2D(flat_cmd, fill=0.0))
             gui_conf['flat_checkbox'] = True
         else:
