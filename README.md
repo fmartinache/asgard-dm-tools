@@ -1,11 +1,11 @@
 # asgard-dm-tools
 User tools to interact in the laboratory with the Asgard DMs
 
-At least for now, a PyQt5 GUI designed to control one of the four deformable mirrors of the ASGARD instrument suite, assuming that the corresponding Asgard DM server is running and that at least two DM channels are set up.
+At least for now, a PyQt5 GUI designed to control one of the four deformable mirrors of the ASGARD instrument suite, assuming that the corresponding Asgard DM server is running and that at least two DM channels are set up. And a turbulence simulator prototype.
 
 ## Installation
 
-> pip install asgard_lab_DM_controller
+> pip install asgard-lab-DM-controller
 
 ## Usage
 

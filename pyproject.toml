@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "asgard_lab_DM_tools"
-version = "0.0.5"
+version = "0.0.6"
 authors = [
   {name = "Frantz Martinache", email="frantz.martinache@oca.eu"},
 ]
 
 dependencies = ["numpy", "xaosim", "PyQt5", "pyqtgraph", "qtpy"]
 
-description = "GUI to interact with one of the Asgard four BMC DMs"
+description = "Tools to interact with the Asgard BMC DMs in lab"
 
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,6 +23,7 @@ classifiers = [
 
 [project.scripts]
 lab-DM-control = 'asgard_lab_DM_tools.asgard_lab_DM_controller:start_gui'
+turbulence-simulator = 'asgard_lab_DM_tools.turbulence_simulator:main'
 
 [project.urls]
 Homepage = "https://github.com/fmartinache/asgard_lab_DM_controller/"
