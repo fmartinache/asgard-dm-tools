@@ -29,6 +29,7 @@ wl = 1.6     # wavelength (in microns)
 yy0 = np.arange(ndm) * (dms + 5)
 
 shm_names = np.sort(glob.glob(f"/dev/shm/dm[1-{ndm}]disp{chn:02d}*"))
+shm0_names = np.sort(glob.glob(f"/dev/shm/dm[1-{ndm}].*"))
 
 if (len(shm_names) < ndm):
     print("DM server not running?")
@@ -36,13 +37,15 @@ if (len(shm_names) < ndm):
 
 dmap = np.zeros((dms, dms))
 
-shms = []
+shms = []  # the turbulence shm
+shm0s = []  # the DM channel (so signal driver)
 
 phase = atmo_screen(isz, ll, r0, L0, fc=5).real
 opd = wl / (2 * np.pi) * np.tile(phase, (2, 2))
 
 for ii in range(ndm):
     shms.append(shm(shm_names[ii]))
+    shm0s.append(shm(shm0_names[ii], nosem=False))
 
 gain = 0.1  # to be adjusted!
 keepgoing = True
@@ -60,6 +63,7 @@ def __flow__(delay=0.1, dx=2, dy=1):
             dmap = opd[yy0[kk]+yy:yy0[kk]+yy+dms, xx:xx+dms]
             dmap -= dmap.mean()
             shms[kk].set_data(gain * dmap)
+            shm0s[kk].post_sems(1)
         time.sleep(delay)
 
 
@@ -77,7 +81,8 @@ def main():
     dmap = np.zeros((dms, dms))
     for kk in range(ndm):
         shms[kk].set_data(dmap)
-    
+        shm0s[kk].post_sems(1)                
+
 # =============================================================================
 if __name__ == "__main__":
     main()

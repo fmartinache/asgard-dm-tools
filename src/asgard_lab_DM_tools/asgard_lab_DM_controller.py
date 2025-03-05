@@ -354,16 +354,15 @@ class MyWindow(QMainWindow):
         shmfs = np.sort(glob.glob(f"/dev/shm/dm{dmid}disp*.im.shm"))
         shmf0 = f"/dev/shm/dm{dmid}.im.shm"
         print(f"shmf0 = {shmf0}")
-        print(shmfs)
         self.nch = len(shmfs)
 
         self.shms = []
         for ii in range(self.nch):
-            self.shms.append(shm(shmfs[ii]))
-            print(f"added: {shmfs[ii]}")  # % (shmfs[ii],))
+            self.shms.append(shm(shmfs[ii], nosem=False))
+            # print(f"added: {shmfs[ii]}")
 
         if self.nch != 0:
-            self.shm0 = shm(shmf0)
+            self.shm0 = shm(shmf0, nosem=False)
         else:
             print("Shared memory structures unavailable. DM server started?")
 
@@ -416,6 +415,8 @@ class MyWindow(QMainWindow):
         # initial configuration of the GUI
         initialize_gui_configuration()
         self.update_gui_configuration()
+        self.shm0.post_sems(1)  # signal the DM to update itself
+        # print([self.shm0.sems[ii].value for ii in range(self.shm0.nsem)])
 
     # =========================================================
     def activate_zernike_sliders(self):
@@ -434,7 +435,7 @@ class MyWindow(QMainWindow):
             self.ui.lbl_disp_zer[ii].setText(f"{self.ui.zer_a0[ii]:.3f}")
             zmap += self.ui.zer_a0[ii] * self.ui.zbank[ii]
         self.shms[2].set_data(zmap)
-
+        self.shm0.post_sems(1)  # signal the DM to update itself
         pass
 
     # =========================================================
@@ -456,13 +457,13 @@ class MyWindow(QMainWindow):
             return
         wdir = os.path.dirname(__file__)
         if self.ui.chB_actv_flat.isChecked():
-            # flat_cmd = np.loadtxt("./17DW019#113_FLAT_MAP_COMMANDS.txt")
             flat_cmd = np.loadtxt(self.select_flat_cmd(wdir))
             self.shms[0].set_data(cmd_2_map2D(flat_cmd, fill=0.0))
             gui_conf['flat_checkbox'] = True
         else:
             self.shms[0].set_data(np.zeros((dms, dms)))
             gui_conf['flat_checkbox'] = False
+        self.shm0.post_sems(1)  # signal the DM to update itself
 
     # =========================================================
     def activate_cross(self):
@@ -482,6 +483,7 @@ class MyWindow(QMainWindow):
         else:
             self.shms[1].set_data(np.zeros((dms, dms)))
             gui_conf['cross_checkbox'] = False
+        self.shm0.post_sems(1)  # signal the DM to update itself
 
     # =========================================================
     def activate_cross_slider(self):
@@ -509,6 +511,7 @@ class MyWindow(QMainWindow):
         else:
             self.shms[1].set_data(np.zeros((dms, dms)))
             gui_conf['ftest_checkbox'] = False
+        self.shm0.post_sems(1)  # signal the DM to update itself
 
     # =========================================================
     def activate_ftest_slider(self):
