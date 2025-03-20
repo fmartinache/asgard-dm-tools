@@ -4,6 +4,7 @@ import numpy as np
 import time
 import threading
 import glob
+import argparse
 
 from xaosim.wavefront import atmo_screen
 from xaosim.shmlib import shm
@@ -40,8 +41,6 @@ dmap = np.zeros((dms, dms))
 shms = []  # the turbulence shm
 shm0s = []  # the DM channel (so signal driver)
 
-phase = atmo_screen(isz, ll, r0, L0, fc=5).real
-opd = wl / (2 * np.pi) * np.tile(phase, (2, 2))
 
 for ii in range(ndm):
     shms.append(shm(shm_names[ii]))
@@ -49,11 +48,13 @@ for ii in range(ndm):
 
 gain = 0.1  # to be adjusted!
 keepgoing = True
+phase = atmo_screen(isz, ll, r0, L0, fc=2).real
+opd = wl / (2 * np.pi) * np.tile(phase, (2, 2))
 
 # =============================================================================
 def __flow__(delay=0.1, dx=2, dy=1):
     yy, xx = 0, 0
-    global phscreens, dms, gain, keepgoing
+    global dms, gain, keepgoing, opd
 
     while keepgoing:
         yy = (yy + dy) % isz
@@ -61,7 +62,7 @@ def __flow__(delay=0.1, dx=2, dy=1):
 
         for kk in range(ndm):
             dmap = opd[yy0[kk]+yy:yy0[kk]+yy+dms, xx:xx+dms]
-            dmap -= dmap.mean()
+            # dmap -= dmap.mean()
             shms[kk].set_data(gain * dmap)
             shm0s[kk].post_sems(1)
         time.sleep(delay)
@@ -69,10 +70,51 @@ def __flow__(delay=0.1, dx=2, dy=1):
 
 # =============================================================================
 def main():
-    global keepgoing
+    global keepgoing, phase, opd
     delay = 0.1
     dx, dy = 2, 1
 
+
+    parser = argparse.ArgumentParser(
+        prog = 'turbulence_simulator',
+        description = 'A command line simulator for Asgard',
+        epilog = "Press enter to exit program")
+
+    parser.add_argument('--r0', type=float, default=0.2,
+                        help='The Fried parameter (in meters, default=0.2)')
+
+    parser.add_argument('--tdiam', type=float, default=1.8,
+                        help='Telescope diameter (in meters, default=1.8)')
+
+    parser.add_argument('--corr', type=float, default=1.0,
+                        help='Correction factor by upstream AO (default=1, no correction)')
+
+    parser.print_help()
+
+    args = parser.parse_args()
+    print(args)
+    r0 = float(args.r0)
+    
+    tdiam = float(args.tdiam)
+    if tdiam < 2: # AT scenario
+        fc = 2  # cut-off frequency of NAOMI
+    else:
+        fc = 20  # cut-off frequency of GPAO
+
+    correc = float(args.corr)
+
+    print(f"r0     = {r0:.2f} meters")
+    print(f"Tdiam  = {tdiam:.2f} meters")
+    print(f"Correc = {correc:.2f}")
+
+    isz = dms * ntdiam
+    ll = tdiam * ntdiam
+    # L0 = 20.0    # turbulence outer scale
+    wl = 1.6     # wavelength (in microns)
+
+    phase = atmo_screen(isz, ll, r0, L0, correc=correc, fc=fc).real
+    opd = wl / (2 * np.pi) * np.tile(phase, (2, 2))
+    
     t = threading.Thread(target=__flow__, args=(delay, dx, dy))
     t.start()
 

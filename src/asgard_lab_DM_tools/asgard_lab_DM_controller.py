@@ -41,8 +41,7 @@ taper = np.exp(-(dd/tprad)**20)  # power to be adjusted ?
 amask = taper > 0.4  # seems to work well
 circ = dd < 4
 
-# home = os.getenv('HOME')
-# conf_dir = next(iter(fpao_tools.__path__))+"/../config/"
+conf_dir = home + "/.config/"
 
 def initialize_gui_configuration():
     '''Initializes the GUI configuration dictionary.
@@ -63,7 +62,7 @@ def main():
 
     global gui_conf
     try:
-        with open(f"gui_config_{dmid}.json") as json_config:
+        with open(f"{conf_dir}dm_gui_config_{dmid}.json") as json_config:
             print("GUI config file found: restoring previous GUI state")
             gui_conf = json.load(json_config)
     except FileNotFoundError:
@@ -76,10 +75,6 @@ def main():
     gui.show()
     myqt.mainloop()
     myqt.gui_quit()
-    print("DONE!")
-    with open('gui_config.json', 'w') as json_config:
-        json.dump(gui_conf, json_config, indent=2)
-    sys.exit()
 
 
 # =====================================================================
@@ -547,7 +542,7 @@ class MyWindow(QMainWindow):
         for ii in range(self.nch):
             self.shms.pop(0)
 
-        with open(f'gui_config_{dmid}.json', 'w') as json_config:
+        with open(f'{conf_dir}dm_gui_config_{dmid}.json', 'w') as json_config:
             json.dump(gui_conf, json_config, indent=2)
         print("end of program")
 

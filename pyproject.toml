@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "asgard_lab_DM_tools"
-version = "0.0.6"
+version = "0.0.9"
 authors = [
   {name = "Frantz Martinache", email="frantz.martinache@oca.eu"},
 ]
@@ -23,6 +23,7 @@ classifiers = [
 
 [project.scripts]
 lab-DM-control = 'asgard_lab_DM_tools.asgard_lab_DM_controller:start_gui'
+lab-MDM-control = 'asgard_lab_DM_tools.asgard_lab_MDM_controller:main'
 turbulence-simulator = 'asgard_lab_DM_tools.turbulence_simulator:main'
 
 [project.urls]
