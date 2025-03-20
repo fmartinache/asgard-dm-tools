@@ -396,7 +396,7 @@ class DMTabWidget(QtWidgets.QWidget):
             return
         wdir = os.path.dirname(__file__)
         if self.chB_actv_flat.isChecked():
-            flat_cmd = np.loadtxt(self.select_flat_cmd(wdir))
+            flat_cmd = np.loadtxt(wdir+"/"+flat_cmd_files[self.dmid-1])
             self.shms[0].set_data(cmd_2_map2D(flat_cmd, fill=0.0))
             gui_conf[f'dm{self.dmid}']['flat_chbox'] = True
         else:
